@@ -1,0 +1,11 @@
+# 工作区临时数据（编辑器/调试产物，不属于项目）
+.workbuddy/
+.screenshots/
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 依赖（本项目零依赖，留作兜底）
+node_modules/

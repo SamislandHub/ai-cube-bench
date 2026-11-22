@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>魔方测试台 · Cube Lab</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: radial-gradient(circle at 50% 0%, #1b2b4a 0%, #0b1220 55%, #05080f 100%);
+    color: #e8f0ff;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 16px 16px 26px; }
+  header { text-align: center; margin-bottom: 10px; }
+  header h1 {
+    margin: 0; font-size: 26px; letter-spacing: 3px;
+    background: linear-gradient(90deg, #5ee7ff, #8b7bff 50%, #ff7ac6);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header p { margin: 4px 0 0; color: #8ea4c8; font-size: 12px; letter-spacing: 1px; }
+  .toolbar {
+    display: flex; flex-wrap: nowrap; gap: 10px; align-items: center;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(140,175,255,.18);
+    border-radius: 12px; padding: 8px 12px; margin-bottom: 10px;
+  }
+  .group {
+    display: flex; align-items: center; gap: 4px; flex: 0 0 auto;
+    padding-right: 10px; border-right: 1px solid rgba(140,175,255,.16);
+  }
+  .group:last-of-type { border-right: none; }
+  .group > span { color: #8ea4c8; font-size: 11px; white-space: nowrap; margin-right: 2px; }
+  button, input {
+    font-family: inherit; font-size: 12px; color: #dceaff;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(140,175,255,.25);
+    border-radius: 7px; padding: 5px 9px; cursor: pointer; transition: .14s;
+    white-space: nowrap;
+  }
+  button:hover { background: rgba(94,231,255,.18); border-color: rgba(94,231,255,.5); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button.primary { background: linear-gradient(90deg, #5ee7ff, #8b7bff); color: #08101f; font-weight: 700; border: none; }
+  button.primary:hover { filter: brightness(1.1); }
+  button.preset { width: 28px; height: 28px; padding: 0; border-radius: 8px; font-weight: 600; }
+  button.preset.active { background: linear-gradient(90deg, #5ee7ff, #8b7bff); color: #08101f; font-weight: 700; border: none; }
+  input[type=number] { width: 46px; text-align: center; cursor: text; padding: 5px 2px; }
+  .stats {
+    display: flex; gap: 12px; align-items: center; margin-left: auto;
+    color: #a9bce0; font-size: 12px; white-space: nowrap;
+  }
+  .stats span { display: inline-flex; align-items: center; gap: 4px; }
+  .stats b { color: #fff; font-variant-numeric: tabular-nums; font-weight: 600; }
+  #score { color: #8fa6cc; min-width: 62px; }
+  #status { color: #ffc978; }
+  #status::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; box-shadow: 0 0 8px currentColor;
+  }
+  #status.ok { color: #7dffa8; }
+  .stage { position: relative; width: 100%; }
+  canvas {
+    display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
+    border-radius: 14px; border: 1px solid rgba(140,175,255,.25);
+    background: radial-gradient(circle at 50% 45%, #132344, #080d1a 70%);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55); touch-action: none; cursor: grab;
+  }
+  canvas:active { cursor: grabbing; }
+  .badge {
+    position: absolute; left: 14px; top: 14px; padding: 6px 12px; border-radius: 999px;
+    background: rgba(8,16,32,.75); border: 1px solid rgba(140,220,255,.3);
+    color: #bff4ff; font-size: 12px; pointer-events: none;
+  }
+  .win {
+    position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%) scale(.9);
+    padding: 14px 28px; border-radius: 14px; font-size: 22px; font-weight: 700;
+    background: rgba(10,20,40,.9); border: 1px solid rgba(140,255,200,.5);
+    color: #8dffb0; opacity: 0; transition: .25s; pointer-events: none; white-space: nowrap;
+  }
+  .win.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  footer { margin-top: 10px; color: #7286a9; font-size: 12px; line-height: 1.8; text-align: center; }
+  kbd { background: rgba(255,255,255,.08); border: 1px solid rgba(140,175,255,.25); border-radius: 5px; padding: 1px 5px; }
+  @media (max-width: 860px) {
+    .toolbar { flex-wrap: wrap; justify-content: center; }
+    .stats { margin-left: 0; width: 100%; justify-content: center; }
+    .group { border-right: none; }
+  }
+  /* 自定义滚动条 */
+  html { scrollbar-width: thin; scrollbar-color: rgba(110,150,220,.55) rgba(8,14,26,.6); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: rgba(8,14,26,.6); }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #5ee7ff, #8b7bff);
+    border-radius: 999px; border: 2px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { filter: brightness(1.2); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+</style>
+<style>
+  /* ============ Theme v2 · 视觉美化 ============ */
+  :root {
+    --cyan:#5ee7ff; --purple:#8b7bff; --pink:#ff7ac6;
+    --muted:#8ea4c8; --dim:#63779b;
+    --glass:rgba(16,27,50,.56);
+    --line:rgba(140,175,255,.16);
+    --grad:linear-gradient(90deg,var(--cyan),var(--purple) 50%,var(--pink));
+  }
+  /* 环境光晕 + 细网格底纹 */
+  body::before, body::after { content:''; position:fixed; inset:0; pointer-events:none; }
+  body::before {
+    z-index:0;
+    background:
+      radial-gradient(55% 38% at 12% -5%, rgba(94,231,255,.13), transparent 70%),
+      radial-gradient(48% 38% at 88% 8%, rgba(139,123,255,.15), transparent 70%),
+      radial-gradient(45% 35% at 50% 105%, rgba(255,122,198,.09), transparent 70%);
+  }
+  body::after {
+    z-index:0;
+    background-image:
+      linear-gradient(rgba(140,175,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140,175,255,.04) 1px, transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(ellipse 85% 65% at 50% 40%, #000 30%, transparent);
+    mask-image:radial-gradient(ellipse 85% 65% at 50% 40%, #000 30%, transparent);
+  }
+  .wrap { position:relative; z-index:1; }
+
+  @keyframes hueShift { to { background-position:200% center; } }
+
+  header h1 {
+    font-size:30px; letter-spacing:8px;
+    background:var(--grad); background-size:200% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:hueShift 7s linear infinite;
+    filter:drop-shadow(0 0 18px rgba(94,231,255,.25));
+  }
+  header p { color:var(--muted); letter-spacing:2px; }
+  header p::before, header p::after { content:'✦'; color:var(--cyan); margin:0 9px; opacity:.55; }
+
+  /* 工具栏：玻璃质感 + 顶部流光 */
+  .toolbar {
+    position:relative; overflow:hidden;
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+    border:1px solid var(--line); border-radius:14px; padding:10px 14px;
+    box-shadow:0 10px 34px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .toolbar::before {
+    content:''; position:absolute; left:0; right:0; top:0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),var(--pink),transparent);
+    opacity:.7;
+  }
+  button, input {
+    background:rgba(255,255,255,.06); border-color:rgba(140,175,255,.22);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05); border-radius:8px;
+  }
+  button:hover {
+    background:rgba(94,231,255,.14); border-color:rgba(94,231,255,.55);
+    box-shadow:0 4px 16px rgba(94,231,255,.18), inset 0 1px 0 rgba(255,255,255,.1);
+  }
+  button.primary {
+    background:var(--grad); background-size:200% auto; border:none;
+    box-shadow:0 4px 18px rgba(94,231,255,.3);
+    animation:hueShift 7s linear infinite;
+  }
+  button.preset { border-radius:9px; }
+  button.preset.active {
+    background:var(--grad); border:none;
+    box-shadow:0 0 16px rgba(94,231,255,.45);
+  }
+  input[type=number]:focus {
+    outline:none; border-color:rgba(94,231,255,.55);
+    box-shadow:0 0 0 3px rgba(94,231,255,.08);
+  }
+  .stats { gap:7px; }
+  .stats span {
+    background:rgba(6,12,26,.5); border:1px solid rgba(140,175,255,.14);
+    border-radius:8px; padding:4px 9px;
+  }
+  .stats b { text-shadow:0 0 12px rgba(94,231,255,.3); }
+  #score { text-shadow:0 0 14px currentColor; }
+  #status.ok { text-shadow:0 0 12px rgba(125,255,168,.5); }
+
+  /* 画布舞台：更深的层次 + 外发光 */
+  canvas {
+    border-color:rgba(140,175,255,.3);
+    background:radial-gradient(circle at 50% 42%, #1A222C 0%, #0D1116 70%, #0B0E13 100%);
+    box-shadow:0 26px 70px rgba(0,0,0,.62), 0 0 50px rgba(94,231,255,.06), inset 0 0 70px rgba(4,8,20,.6);
+  }
+  .badge {
+    background:rgba(8,16,32,.72);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    border-color:rgba(94,231,255,.35); box-shadow:0 4px 16px rgba(0,0,0,.3);
+    font-weight:600; letter-spacing:.5px;
+  }
+  .win {
+    background:linear-gradient(135deg,rgba(18,48,40,.95),rgba(10,20,40,.95));
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    border-color:rgba(141,255,176,.55);
+    box-shadow:0 0 44px rgba(141,255,176,.22), 0 20px 50px rgba(0,0,0,.5);
+    text-shadow:0 0 16px rgba(141,255,176,.5);
+  }
+  footer {
+    color:var(--dim); background:rgba(8,14,26,.32);
+    border:1px solid rgba(140,175,255,.1); border-radius:12px;
+    padding:10px 16px; margin-top:14px;
+  }
+  kbd { background:rgba(94,231,255,.1); border-color:rgba(94,231,255,.3); color:#bff4ff; }
+
+  /* 压缩间距，保证工具栏在 908px 内单行显示 */
+  .toolbar { gap:7px; padding:9px 11px; }
+  .group { gap:3px; padding-right:7px; }
+  button, input { padding:5px 7px; }
+  input[type=number] { width:40px; }
+  .stats { gap:5px; }
+  .stats span { padding:3px 6px; }
+</style>
+<style>
+
+/* ============ Theme v3 · 竞赛计时台 ============
+   贴纸色是数据色（白/红/橙/黄/绿/蓝），琥珀只表示当前活动。
+   材质是哑光塑料与钢：实色面板、1px 描边、3px 圆角。 */
+:root {
+  --ink:#0B0E13; --surface:#141A22; --surface-2:#1B222C;
+  --line:#2A3441; --line-soft:#202833;
+  --text:#E8EDF3; --muted:#94A2B2; --dim:#6A788A;
+  --signal:#F5B942; --signal-ink:#1B1406;
+  --u:#F5F5F5; --r:#FF4D4F; --f:#52C41A; --d:#FFD666; --l:#FFA940; --b:#1677FF;
+  --mono:"JetBrains Mono","IBM Plex Mono",Consolas,"Cascadia Code",monospace;
+  --display:"Bahnschrift","DIN Alternate","Arial Narrow","Microsoft YaHei",sans-serif;
+}
+html, body {
+  background:var(--ink); color:var(--text);
+  font-family:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+}
+body::before, body::after { content:none; }
+.wrap { position:relative; z-index:1; max-width:1040px; margin:0 auto; padding:22px 24px 32px; }
+
+/* 品牌条 */
+header.top {
+  display:flex; align-items:center; justify-content:space-between; gap:18px;
+  margin-bottom:18px; text-align:left; padding-bottom:16px;
+  border-bottom:1px solid var(--line);
+}
+header.top .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+header.top .logo {
+  position:relative; flex:0 0 auto; width:46px; height:46px;
+  background:#101620; border:1px solid var(--line); border-radius:4px;
+  animation:none; box-shadow:none;
+}
+header.top .logo i { position:absolute; top:12px; left:13px; width:20px; height:20px; }
+.logo .cap { background:var(--u); clip-path:polygon(50% 0,100% 25%,50% 50%,0 25%); }
+.logo .side-l { background:var(--r); clip-path:polygon(0 25%,50% 50%,50% 100%,0 75%); }
+.logo .side-r { background:var(--b); clip-path:polygon(50% 50%,100% 25%,100% 75%,50% 100%); }
+header.top h1 {
+  margin:0; font-family:var(--display); font-size:23px; font-weight:600;
+  letter-spacing:1px; line-height:1.15; color:var(--text);
+  background:none; background-image:none; -webkit-background-clip:border-box;
+  background-clip:border-box; -webkit-text-fill-color:var(--text);
+  animation:none; filter:none;
+}
+header.top p { margin:5px 0 0; color:var(--dim); font-size:11.5px; letter-spacing:0; }
+header.top p::before, header.top p::after { content:none; }
+.top-status {
+  flex:0 0 auto; display:flex; align-items:center; gap:9px;
+  font-size:11.5px; color:var(--muted); padding:7px 12px;
+  border:1px solid var(--line); border-radius:3px; background:var(--surface);
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+.top-status .dot { width:7px; height:7px; border-radius:50%; background:var(--signal); box-shadow:none; }
+.top-status .dot.ok { background:var(--f); }
+
+/* 单栏纵向流：舞台在上，成绩在下 */
+.main { min-width:0; }
+.score-panel { margin-top:2px; }
+.score-body { display:grid; grid-template-columns:minmax(220px,300px) minmax(0,1fr); gap:22px; align-items:start; }
+@media (max-width:720px){ .score-body { grid-template-columns:1fr; } }
+
+/* 工具栏：仪器条 */
+.toolbar {
+  flex-wrap:wrap; gap:8px; padding:10px 12px; margin-bottom:14px;
+  background:var(--surface); border:1px solid var(--line); border-radius:4px;
+  box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+.toolbar::before { content:none; }
+.group { gap:4px; padding-right:10px; border-right:1px solid var(--line-soft); }
+.group:last-of-type { border-right:none; }
+.group > span { color:var(--dim); font-size:11px; }
+button, input {
+  font-family:inherit; font-size:12px; color:var(--text);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:3px;
+  padding:6px 10px; cursor:pointer; transition:background-color .15s,border-color .15s,color .15s;
+  white-space:nowrap; box-shadow:none;
+}
+button:hover { background:#232C38; border-color:#3B4858; transform:none; box-shadow:none; }
+button:focus-visible, input:focus-visible {
+  outline:2px solid var(--signal); outline-offset:2px;
+}
+button.primary, .toolbar button.primary, .panel button.primary {
+  background:var(--signal); color:var(--signal-ink); border-color:var(--signal);
+  font-weight:700; box-shadow:none; animation:none; background-image:none;
+}
+button.primary:hover, .toolbar button.primary:hover, .panel button.primary:hover {
+  background:#FFC65E; border-color:#FFC65E;
+}
+button.preset { width:28px; height:28px; padding:0; border-radius:3px; font-family:var(--mono); }
+button.preset.active {
+  background:var(--signal); color:var(--signal-ink); border-color:var(--signal);
+  box-shadow:none; background-image:none; animation:none;
+}
+input[type=number] { width:44px; text-align:center; cursor:text; padding:6px 2px; font-family:var(--mono); }
+input[type=number]:focus { outline:2px solid var(--signal); outline-offset:2px; border-color:var(--line); box-shadow:none; }
+.toolbar .stats { gap:6px; }
+.toolbar .stats span {
+  padding:4px 8px; background:transparent; border:none; border-right:1px solid var(--line-soft);
+  border-radius:0; color:var(--muted); font-size:11px;
+}
+.toolbar .stats span:last-child { border-right:none; }
+.toolbar .stats b { color:var(--text); font-family:var(--mono); font-weight:500; text-shadow:none; }
+#score { text-shadow:none; }
+#status { color:var(--signal); }
+#status.ok { color:var(--f); text-shadow:none; }
+
+/* 评测协议：页面自解释，AI 打开即可照做 */
+.protocol {
+  background:var(--surface-2); border:1px solid var(--line); border-left:3px solid var(--signal);
+  border-radius:4px; padding:14px 16px; margin-bottom:14px;
+}
+.protocol-head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+.protocol-kicker { font-family:var(--display); font-size:13px; font-weight:600; color:var(--signal); letter-spacing:.5px; }
+.protocol-sub { font-size:10.5px; color:var(--dim); }
+.protocol-steps { list-style:none; margin:0; padding:0; display:grid; gap:7px; }
+.protocol-steps li { display:flex; align-items:flex-start; gap:10px; font-size:11.5px; line-height:1.6; color:var(--muted); }
+.pnum {
+  flex:0 0 auto; width:19px; height:19px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:11px; color:var(--signal-ink); background:var(--signal); border-radius:3px;
+}
+.ptext code { color:var(--text); background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:1px 5px; font-size:11px; }
+.protocol-foot { margin:10px 0 0; padding-top:9px; border-top:1px solid var(--line-soft); font-size:10px; color:var(--dim); line-height:1.7; }
+.protocol-foot code { color:var(--muted); }
+
+/* 舞台 */
+.stage { position:relative; width:100%; }
+canvas {
+  border-radius:4px; border:1px solid var(--line); background:#0D1116;
+  box-shadow:0 16px 38px rgba(0,0,0,.38);
+}
+.badge {
+  background:#101620; border:1px solid var(--line); border-radius:3px;
+  color:var(--muted); font-family:var(--mono); font-size:11px;
+  font-weight:400; letter-spacing:0; box-shadow:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+.win {
+  position:fixed; left:50%; top:50%; z-index:60;
+  background:#151D26; border:1px solid var(--f); border-radius:4px;
+  color:var(--f); box-shadow:0 24px 70px rgba(0,0,0,.7), 0 0 0 1px rgba(82,196,26,.15);
+  text-shadow:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+  white-space:normal; text-align:center; min-width:200px; padding:20px 30px;
+  border-color:var(--f);
+}
+.win-score {
+  font-family:var(--display); font-size:52px; font-weight:600; line-height:1;
+  color:var(--text); letter-spacing:-2px; font-variant-numeric:tabular-nums;
+}
+.win-grade {
+  display:inline-block; margin-top:8px; padding:3px 12px;
+  font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:2px;
+  border:1px solid currentColor; border-radius:3px; color:var(--f);
+}
+.win-meta {
+  margin-top:9px; font-family:var(--mono); font-size:10.5px; color:var(--muted);
+  line-height:1.6; letter-spacing:.3px;
+}
+/* 会话控制条：测试的开始 / 结束边界 */
+.session-bar {
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--signal);
+  border-radius:4px; padding:13px 15px; margin-bottom:14px;
+}
+.session-lead { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1 1 260px; }
+.session-phase { font-family:var(--display); font-size:15px; font-weight:600; color:var(--text); }
+.session-detail { font-size:10.5px; color:var(--dim); line-height:1.5; }
+.session-controls { display:flex; align-items:center; gap:7px; flex:0 0 auto; }
+.seed-field {
+  display:flex; align-items:center; gap:5px; color:var(--dim); font-size:11px; white-space:nowrap;
+}
+.seed-field input { width:64px; padding:6px 7px; font-family:var(--mono); font-size:12px; }
+.session-clock {
+  display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:0 0 auto;
+  font-family:var(--mono); font-variant-numeric:tabular-nums;
+}
+.session-clock span { font-size:18px; color:var(--text); line-height:1; }
+.session-clock small { font-size:10px; color:var(--dim); }
+.session-bar[data-state="active"] { border-left-color:var(--f); }
+.session-bar[data-state="active"] .session-phase { color:var(--f); }
+.session-bar[data-state="finished"] { border-left-color:var(--muted); }
+/* 题目锁定时淡化画布，提示尚未揭示 */
+.stage.is-locked canvas { filter:saturate(.35) brightness(.72); }
+.stage.is-locked .stage-hint { color:var(--dim); }
+@media (max-width:600px){
+  .session-bar { padding:11px 12px; }
+  .session-clock { align-items:flex-start; }
+}
+
+.stage-hint {
+  margin:10px 0 14px; color:var(--dim); font-size:11px; line-height:1.7; text-align:left;
+  background:none; border:none; border-radius:0; padding:0;
+}
+kbd { background:var(--surface-2); border:1px solid var(--line); border-radius:3px; color:var(--muted); font-family:var(--mono); font-size:10px; }
+
+/* 面板：实色模块 */
+.panel {
+  position:relative; overflow:hidden;
+  background:var(--surface); border:1px solid var(--line); border-radius:4px;
+  padding:16px; margin-bottom:14px; box-shadow:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none; transition:none;
+}
+.panel:hover { border-color:var(--line); box-shadow:none; }
+.panel::before { content:none; }
+.panel h2 {
+  margin:0 0 12px; font-size:12px; font-weight:600; letter-spacing:0; color:var(--text);
+  display:flex; align-items:center; gap:9px;
+}
+.panel h2::before { content:''; width:6px; height:6px; border-radius:1px; background:var(--signal); }
+.panel h2 span { color:var(--dim); font-size:10px; font-weight:400; }
+
+/* 成绩：主读数 */
+.score-hero {
+  display:flex; align-items:center; gap:14px; margin-bottom:12px;
+  background:var(--surface-2); border:1px solid var(--line); border-radius:4px;
+  padding:14px 16px; overflow:hidden;
+}
+.score-hero::after { content:none; }
+.score-num {
+  font-family:var(--display); font-size:52px; font-weight:600; letter-spacing:-2px;
+  color:var(--dim); font-variant-numeric:tabular-nums; line-height:1; text-shadow:none;
+}
+.score-grade {
+  font-family:var(--mono); font-size:14px; font-weight:700; min-width:42px; text-align:center;
+  padding:10px 0; border-radius:3px; background:#101620; border:1px solid var(--line); color:var(--dim);
+}
+.score-meta { font-family:var(--mono); font-size:10px; color:var(--dim); line-height:1.8; }
+.score-meta b { color:var(--text); font-weight:500; }
+table.scores { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:10.5px; font-variant-numeric:tabular-nums; }
+table.scores th { color:var(--dim); font-weight:500; text-align:right; padding:7px 4px; font-size:9.5px; border-bottom:1px solid var(--line); }
+table.scores th:first-child, table.scores td:first-child { text-align:left; }
+table.scores td { color:var(--muted); text-align:right; padding:7px 4px; border-bottom:1px solid var(--line-soft); }
+table.scores td.g { font-weight:700; }
+table.scores tbody tr:hover td { background:var(--surface-2); }
+.scores-wrap { max-height:200px; overflow:auto; }
+.empty { color:var(--dim); font-size:10.5px; padding:6px 0; }
+.score-note { color:var(--dim); font-size:10px; line-height:1.7; margin:10px 0 0; }
+
+footer {
+  margin-top:22px; text-align:left; color:var(--dim); font-size:11px; line-height:1.8;
+  border-top:1px solid var(--line); padding-top:14px;
+  background:none; border-left:none; border-right:none; border-bottom:none; border-radius:0;
+}
+html { scrollbar-width:thin; scrollbar-color:#33404F var(--ink); }
+::-webkit-scrollbar { width:9px; height:9px; }
+::-webkit-scrollbar-track { background:var(--ink); }
+::-webkit-scrollbar-thumb { background:#33404F; border:2px solid var(--ink); border-radius:999px; }
+::-webkit-scrollbar-thumb:hover { background:#435464; }
+@media (max-width:1060px){ header.top { flex-wrap:wrap; } .top-status { order:-1; } }
+@media (max-width:600px){
+  .wrap { padding:16px 14px 24px; }
+  header.top h1 { font-size:20px; }
+  .toolbar .stats { width:100%; justify-content:flex-start; }
+}
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><i class="cap"></i><i class="side-l"></i><i class="side-r"></i></div>
+      <div>
+        <h1>魔方测试台</h1>
+        <p>读取状态，执行转动，给大模型出题</p>
+      </div>
+    </div>
+    <div class="top-status"><span class="dot ok" id="dot"></span><span>CubeAPI 就绪</span></div>
+  </header>
+
+  <div class="main">
+    <div class="toolbar">
+    <div class="group">
+      <span>阶数</span>
+      <button id="minus">−</button>
+      <input type="number" id="order" min="2" max="8" value="3">
+      <button id="plus">+</button>
+      <button id="apply">应用</button>
+    </div>
+    <div class="group" id="presets">
+      <span>快捷</span>
+      <button class="preset" data-n="2">2</button>
+      <button class="preset" data-n="3">3</button>
+      <button class="preset" data-n="4">4</button>
+      <button class="preset" data-n="5">5</button>
+      <button class="preset active" data-n="6">6</button>
+    </div>
+    <div class="group">
+      <button id="scramble">随机出题</button>
+      <button id="undo">撤销</button>
+      <button id="reset">复原</button>
+      <button id="view">复位</button>
+    </div>
+    <div class="stats">
+      <span>步数 <b id="moves">0</b></span>
+      <span>时间 <b id="time">00:00.0</b></span>
+      <span>得分 <b id="score">—</b></span>
+      <span id="status" class="ok">已复原</span>
+    </div>
+  </div>
+
+  
+    <div class="session-bar" id="sessionBar" data-state="idle">
+      <div class="session-lead">
+        <span class="session-phase" id="sessPhase">待开始 · 题目已锁定</span>
+        <span class="session-detail" id="sessDetail">领取题目后才揭示魔方状态并开始计时，避免提前预计算解法</span>
+      </div>
+      <div class="session-controls">
+        <label class="seed-field">种子 <input type="number" id="seedInput" value="42" title="留空则随机"></label>
+        <button class="primary" id="startBtn">开始测试</button>
+        <button id="finishBtn" disabled="">交卷</button>
+      </div>
+      <div class="session-clock"><span id="sessClock">00:00.0</span><small id="sessMoves">0 步</small></div>
+    </div>
+
+    <section class="protocol" aria-label="AI 评测协议">
+      <div class="protocol-head">
+        <span class="protocol-kicker">评测协议 · AGENT PROTOCOL</span>
+        <span class="protocol-sub">任何 AI 打开本页即可按此评测，无需阅读代码</span>
+      </div>
+      <ol class="protocol-steps">
+        <li><span class="pnum">1</span><span class="ptext">调用 <code>CubeAPI.evaluate()</code> 领取题目，得到 <code>facelets</code>（54 位面块串，顺序 U R F D L B）</span></li>
+        <li><span class="pnum">2</span><span class="ptext">自行求解这串面块，得出标准转动记号，如 <code>R U R' F2</code></span></li>
+        <li><span class="pnum">3</span><span class="ptext">调用 <code>CubeAPI.submit("你的解法")</code> 提交，自动执行并计分</span></li>
+      </ol>
+      <p class="protocol-foot">也可用 <code>CubeAPI.help()</code> 查看完整接口；<code>finish()</code> 可在解不出时交卷（记 DNF）。评分只看解法，与是否读取页面代码无关。</p>
+    </section>
+
+    <div class="stage is-locked">
+      <canvas id="cv" width="960" height="720" style="position: relative;"></canvas>
+      <div class="badge" id="badge">6 阶魔方</div>
+      <div class="win" id="win">
+        <div class="win-score" id="winScore">—</div>
+        <div class="win-grade" id="winGrade">—</div>
+        <div class="win-meta" id="winMeta"></div>
+      </div>
+    </div>
+    <p class="stage-hint">拖动魔方表面 = 转动该层　·　拖动空白处或按 <kbd>Shift</kbd> 拖动 = 旋转视角　·　滚轮 = 缩放　·　双击 = 复位视角　·　<span style="opacity:.45">渲染 r7</span></p>
+
+    <div class="panel score-panel">
+      <h2>成绩评测 <span>步数 60% + 时间 40%</span></h2>
+      <div class="score-body">
+        <div class="score-left">
+          <div class="score-hero">
+            <div class="score-num" id="scoreNum">—</div>
+            <div class="score-grade" id="scoreGrade">—</div>
+            <div class="score-meta" id="scoreMeta">复原后自动计分</div>
+          </div>
+          <p class="score-note">得分 = (60%×步数效率 + 40%×时间效率) × 难度系数 × 1000；等级 S+≥1200 / S≥1000 / A≥800 / B≥600 / C≥400。</p>
+        </div>
+        <div class="score-right">
+          <div class="scores-wrap">
+            <table class="scores" id="scoreTable">
+              <thead><tr><th>时间</th><th>阶</th><th>分</th><th>级</th><th>步</th><th>秒</th><th>种子</th></tr></thead>
+              <tbody id="scoreBody"><tr><td colspan="7" class="empty">暂无成绩</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /.main -->
+
+  <footer>
+    全部本地运行，无需联网 · 领取题目后才揭示状态并开始计时，复原自动结算或交卷记 DNF<br>
+    得分综合步数与时间 · 调用方式与接口清单见 <code>CubeAPI.help()</code>
+  </footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const orderInput = document.getElementById('order');
+  const badge = document.getElementById('badge');
+  const winEl = document.getElementById('win');
+  const statusEl = document.getElementById('status');
+  const movesEl = document.getElementById('moves');
+  const timeEl = document.getElementById('time');
+  const scoreEl = document.getElementById('score');
+
+  function setStatus(text) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle('ok', text === '已复原');
+  }
+
+  const AXES = [[1,0,0],[0,1,0],[0,0,1]];
+  const FACES = [
+    { id:'px', axis:0, sign: 1, color:'#ff4d4f' },
+    { id:'nx', axis:0, sign:-1, color:'#ffa940' },
+    { id:'py', axis:1, sign: 1, color:'#f5f5f5' },
+    { id:'ny', axis:1, sign:-1, color:'#ffd666' },
+    { id:'pz', axis:2, sign: 1, color:'#52c41a' },
+    { id:'nz', axis:2, sign:-1, color:'#1677ff' },
+  ];
+  const FACE_BY_ID = Object.fromEntries(FACES.map(f => [f.id, f]));
+
+  // ---------- 3x3 矩阵与向量 ----------
+  const matMul = (A, B) => {
+    const M = new Array(9);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+      M[i*3+j] = A[i*3]*B[j] + A[i*3+1]*B[3+j] + A[i*3+2]*B[6+j];
+    return M;
+  };
+  const matVec = (M, v) => [
+    M[0]*v[0] + M[1]*v[1] + M[2]*v[2],
+    M[3]*v[0] + M[4]*v[1] + M[5]*v[2],
+    M[6]*v[0] + M[7]*v[1] + M[8]*v[2],
+  ];
+  const IDENT = [1,0,0, 0,1,0, 0,0,1];
+  const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  function rotMat(axis, angle) {
+    const c = Math.cos(angle), s = Math.sin(angle);
+    if (axis === 0) return [1,0,0, 0,c,-s, 0,s,c];
+    if (axis === 1) return [c,0,s, 0,1,0, -s,0,c];
+    return [c,-s,0, s,c,0, 0,0,1];
+  }
+  const roundM = M => M.map(v => Math.round(v));
+
+  // ---------- 魔方状态 ----------
+  let n = 3;
+  let cubies = [];
+  let anim = null;
+  let history = [];
+  let moveCount = 0;
+  let startTime = 0, elapsed = 0, running = false, scrambled = false, solvedNow = true;
+  let viewX = 0.48, viewY = -0.68, zoom = 1;
+  let pickables = [];
+  let drag = null;
+  let challenge = null;   // 当前题目：{ seed, scrambleMoves, startedAt }
+  let lastScore = null;
+  // 测试会话：idle(题目锁定) → active(揭示并计时) → finished(已结算)
+  let session = 'idle';
+
+  function assertActive() {
+    if (session === 'idle') throw new Error('题目尚未开始：先调用 CubeAPI.start() 领取题目');
+    if (session === 'finished') throw new Error('本次测试已结束：调用 CubeAPI.start() 开始新一局');
+  }
+  function sessionSeconds() {
+    if (!challenge) return 0;
+    const end = session === 'finished' ? (challenge.endedAt || performance.now()) : performance.now();
+    return Math.max(0, (end - challenge.startedAt) / 1000);
+  }
+
+  function center() { return (n - 1) / 2; }
+
+  function buildCube(size) {
+    n = size;
+    cubies = [];
+    for (let x = 0; x < n; x++) for (let y = 0; y < n; y++) for (let z = 0; z < n; z++) {
+      const idx = [x, y, z];
+      const stickers = FACES.filter(f =>
+        f.sign > 0 ? idx[f.axis] === n - 1 : idx[f.axis] === 0
+      ).map(f => f.id);
+      cubies.push({ pos: idx.slice(), basePos: idx.slice(), orient: IDENT.slice(), stickers });
+    }
+    anim = null; drag = null; history = []; moveCount = 0;
+    startTime = 0; elapsed = 0; running = false; scrambled = false; solvedNow = true;
+    badge.textContent = n + ' 阶魔方';
+    orderInput.value = n;
+    winEl.classList.remove('show');
+    setStatus('已复原');
+    movesEl.textContent = '0';
+    timeEl.textContent = '00:00.0';
+    challenge = null; lastScore = null; session = 'idle';
+    scoreEl.textContent = '—'; scoreEl.style.color = '';
+    updatePresets();
+  }
+
+  function transformPos(R, p) {
+    const c = center();
+    const v = matVec(R, [p[0]-c, p[1]-c, p[2]-c]);
+    return [v[0]+c, v[1]+c, v[2]+c];
+  }
+
+  function applyTurn(axis, layer, dir, instant, dur) {
+    const affected = cubies.filter(cu => Math.round(cu.pos[axis]) === layer);
+    if (!affected.length) return;
+    if (instant) {
+      const R = rotMat(axis, dir * Math.PI / 2);
+      affected.forEach(cu => {
+        cu.pos = transformPos(R, cu.pos).map(v => Math.round(v));
+        cu.orient = roundM(matMul(R, cu.orient));
+      });
+    } else {
+      if (anim) return;
+      anim = {
+        axis, layer, dir, t0: performance.now(), dur: Number(dur) > 0 ? Number(dur) : 170,
+        items: affected.map(cu => ({ cu, pos: cu.pos.slice(), orient: cu.orient.slice() })),
+      };
+    }
+  }
+
+  function finishTurn(axis, layer, dir, countMove) {
+    if (countMove) {
+      history.push({ axis, layer, dir });
+      moveCount++;
+      movesEl.textContent = moveCount;
+      if (!running) { running = true; startTime = performance.now() - elapsed; }
+    }
+    solvedNow = isSolved();
+    setStatus(solvedNow ? '已复原' : '挑战中');
+    if (solvedNow && session === 'active') {
+      elapsed = performance.now() - startTime;
+      settleSession('solved');
+      running = false;
+      emitChange('solve');
+      winEl.classList.add('show');
+      setTimeout(() => winEl.classList.remove('show'), 5200);
+    }
+  }
+
+  function isSolved() {
+    for (const f of FACES) {
+      const axisVec = AXES[f.axis];
+      const want = [axisVec[0] * f.sign, axisVec[1] * f.sign, axisVec[2] * f.sign];
+      const colors = new Set();
+      let count = 0;
+      for (const cu of cubies) for (const sid of cu.stickers) {
+        const sf = FACE_BY_ID[sid];
+        const localNormal = [0, 0, 0];
+        localNormal[sf.axis] = sf.sign;
+        const norm = matVec(cu.orient, localNormal);
+        if (Math.abs(norm[0]-want[0]) + Math.abs(norm[1]-want[1]) + Math.abs(norm[2]-want[2]) < .1) {
+          colors.add(sid); count++;
+        }
+      }
+      if (count !== n*n || colors.size !== 1) return false;
+    }
+    return true;
+  }
+
+  function scramble() {
+    buildCube(n);
+    const count = n * 8 + 12;
+    for (let i = 0; i < count; i++) {
+      applyTurn(
+        Math.floor(Math.random() * 3),
+        Math.floor(Math.random() * n),
+        Math.random() < .5 ? 1 : -1,
+        true
+      );
+    }
+    newChallenge(null, count);
+    scrambled = true; solvedNow = false;
+    setStatus('挑战中');
+    history = [];
+    moveCount = 0; movesEl.textContent = '0';
+    startTime = 0; elapsed = 0; running = false;
+    winEl.classList.remove('show');
+  }
+
+  function undo() {
+    assertActive();
+    if (!history.length || anim) return;
+    const m = history.pop();
+    applyTurn(m.axis, m.layer, -m.dir, true);
+    moveCount = Math.max(0, moveCount - 1);
+    movesEl.textContent = moveCount;
+    solvedNow = isSolved();
+    setStatus(solvedNow ? '已复原' : '挑战中');
+    if (solvedNow) {
+      running = false;
+      if (scrambled || moveCount > 0) {
+        winEl.classList.add('show');
+        setTimeout(() => winEl.classList.remove('show'), 5200);
+      }
+    }
+  }
+
+  // ---------- 视图与投影 ----------
+  function viewMatrix() { return matMul(rotMat(0, viewX), rotMat(1, viewY)); }
+  function focal() {
+    const base = Math.min(W * .54, H * .64) / (n * 1.04) * 13;
+    return base * zoom;
+  }
+  function project(p, Rv, foc) {
+    const w = matVec(Rv, p);
+    const scale = foc / (13 - w[2]);
+    return [W/2 + w[0]*scale, H/2 - w[1]*scale, scale];
+  }
+
+  // n³ 个独立小立方体：边长略小于格距，块与块之间留出真实缝隙。
+  // 这样轮廓是锯齿状的、侧面条带是一块块分开的，看起来才是拼起来的方块组。
+  const CUBIE = .94;
+  const HALF = CUBIE / 2;
+  function faceCorners(f) {
+    const a = f.axis, b = (a+1)%3, c = (a+2)%3;
+    const base = AXES[a].map(v => v * f.sign * HALF);
+    const mk = (sb, sc) => {
+      const o = [0,0,0];
+      o[b] = sb * HALF; o[c] = sc * HALF;
+      return [base[0]+o[0], base[1]+o[1], base[2]+o[2]];
+    };
+    return [mk(-1,-1), mk(1,-1), mk(1,1), mk(-1,1)];
+  }
+  const FCORNERS = Object.fromEntries(FACES.map(f => [f.id, faceCorners(f)]));
+
+  // 透视相机在视图空间 (0,0,13)。nw[2] > 0 只是正交相机的判据，掠射角下会把
+  // 实际已经背对镜头的面也当成正面画出来；它们会投进正面轮廓内部，把压扁成
+  // 几像素的侧条带切成锯齿状黑缺口。这里改用「面心指向相机」判定，并返回投影点。
+  function faceView(cu, f, Rv, foc, c0) {
+    const nl = [0,0,0]; nl[f.axis] = f.sign;
+    const normalLocal = matVec(cu.orient, nl);
+    const nw = matVec(Rv, normalLocal);
+    if (nw[2] <= .002) return null;
+    const cs = FCORNERS[f.id], fc = [0,0,0];
+    for (let i = 0; i < 4; i++) {
+      fc[0] += cs[i][0]; fc[1] += cs[i][1]; fc[2] += cs[i][2];
+    }
+    fc[0] /= 4; fc[1] /= 4; fc[2] /= 4;
+    const rc = matVec(cu.orient, fc);
+    const w = matVec(Rv, [rc[0]+cu.pos[0]-c0, rc[1]+cu.pos[1]-c0, rc[2]+cu.pos[2]-c0]);
+    if (nw[0]*(-w[0]) + nw[1]*(-w[1]) + nw[2]*(13 - w[2]) <= 0) return null;
+    const pts = cs.map(p => {
+      const r = matVec(cu.orient, p);
+      return project([r[0]+cu.pos[0]-c0, r[1]+cu.pos[1]-c0, r[2]+cu.pos[2]-c0], Rv, foc);
+    });
+    return { nw, normalLocal, pts, depth: w[2] };
+  }
+
+  function pointInPoly(pt, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length-1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+      if (((yi > pt[1]) !== (yj > pt[1])) && (pt[0] < (xj-xi)*(pt[1]-yi)/(yj-yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+
+  // ---------- 绘制 ----------
+  function draw() {
+    const Rv = viewMatrix(), foc = focal();
+    ctx.clearRect(0, 0, W, H);
+    const bg = ctx.createRadialGradient(W/2, H*.42, 30, W/2, H*.42, W*.7);
+    bg.addColorStop(0, '#1A222C'); bg.addColorStop(1, '#0D1116');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    pickables = [];
+    const c0 = center();
+    const order = cubies.map(cu => ({
+      cu,
+      d: matVec(Rv, [cu.pos[0]-c0, cu.pos[1]-c0, cu.pos[2]-c0])[2]
+    })).sort((a, b) => a.d - b.d);
+
+    for (const { cu } of order) {
+      // 本块可见面：透视判定 + 投影点 + 深度（整块面都是转层热区，含黑色缝隙）
+      const vis = {};
+      for (const f of FACES) {
+        const v = faceView(cu, f, Rv, foc, c0);
+        if (!v) continue;
+        vis[f.id] = v;
+        // 每个小方块自己的深色塑料面；块与块之间的缝隙透出的就是这层塑料
+        ctx.beginPath(); ctx.moveTo(v.pts[0][0], v.pts[0][1]);
+        for (let i = 1; i < 4; i++) ctx.lineTo(v.pts[i][0], v.pts[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = '#111827'; ctx.fill();
+        pickables.push({ pts: v.pts, cu, sid: f.id, normalLocal: v.normalLocal, depth: v.depth });
+      }
+
+      for (const sid of cu.stickers) {
+        const f = FACE_BY_ID[sid];
+        const v = vis[sid];
+        if (!v) continue;
+        const facing = Math.min(1, v.nw[2]);
+        // 贴纸四周按屏幕尺寸等比内缩，留一圈深色塑料边；
+        // 块与块之间另有真实缝隙，所以这里的内缩要小，不能把缝糊掉
+        const fp = v.pts;
+        const ul = Math.hypot(fp[1][0]-fp[0][0], fp[1][1]-fp[0][1]) || 1;
+        const vl = Math.hypot(fp[3][0]-fp[0][0], fp[3][1]-fp[0][1]) || 1;
+        const ratio = Math.min(ul, vl) / Math.max(ul, vl);
+        const mu = .045 * Math.min(ul, vl);
+        const mv = mu;
+        const ux = (fp[1][0]-fp[0][0]) / ul, uy = (fp[1][1]-fp[0][1]) / ul;
+        const vx = (fp[3][0]-fp[0][0]) / vl, vy = (fp[3][1]-fp[0][1]) / vl;
+        const pts = [
+          [fp[0][0] + ux*mu + vx*mv, fp[0][1] + uy*mu + vy*mv],
+          [fp[1][0] - ux*mu + vx*mv, fp[1][1] - uy*mu + vy*mv],
+          [fp[2][0] - ux*mu - vx*mv, fp[2][1] - uy*mu - vy*mv],
+          [fp[3][0] + ux*mu - vx*mv, fp[3][1] + uy*mu - vy*mv],
+        ];
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < 4; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = f.color; ctx.fill();
+        if (facing > .22 && ratio > .6) {
+          ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = Math.min(1, facing * 3); ctx.stroke();
+        }
+        // 高光只在正对镜头的贴纸上画，侧视时画出来只是白色杂点
+        if (facing > .5) {
+          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]);
+          ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+      }
+    }
+    pickables.sort((a, b) => a.depth - b.depth);
+  }
+
+  // ---------- 交互 ----------
+  function canvasPos(e) {
+    const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
+  }
+
+  function pickAt(p) {
+    for (let i = pickables.length - 1; i >= 0; i--) {
+      if (pointInPoly(p, pickables[i].pts)) return pickables[i];
+    }
+    return null;
+  }
+
+  function doTurnFromDrag(hit, dx, dy) {
+    const f = FACE_BY_ID[hit.sid];
+    const a = f.axis;
+    const others = [0,1,2].filter(i => i !== a);
+    const Rv = viewMatrix(), foc = focal();
+    const nl = hit.normalLocal;
+    const cu = hit.cu;
+    // 面中心（世界坐标）
+    const localCenter = nl.map(v => v * HALF);
+    const rotated = matVec(cu.orient, localCenter);
+    const c = center();
+    const worldCenter = [rotated[0]+cu.pos[0]-c, rotated[1]+cu.pos[1]-c, rotated[2]+cu.pos[2]-c];
+    const p0 = project(worldCenter, Rv, foc);
+
+    let best = null;
+    for (const oi of others) {
+      const t = matVec(cu.orient, AXES[oi]);
+      const p1 = project([
+        worldCenter[0] + t[0]*.5, worldCenter[1] + t[1]*.5, worldCenter[2] + t[2]*.5
+      ], Rv, foc);
+      let sx = p1[0]-p0[0], sy = p1[1]-p0[1];
+      const len = Math.hypot(sx, sy) || 1;
+      sx /= len; sy /= len;
+      const dl = Math.hypot(dx, dy) || 1;
+      const score = (sx*dx + sy*dy) / dl;
+      if (!best || Math.abs(score) > Math.abs(best.score)) {
+        best = { t: t.map(v => v * Math.sign(score || 1)), score };
+      }
+    }
+    const axisVec = cross(nl, best.t);
+    let axis = 0;
+    for (let i = 1; i < 3; i++) if (Math.abs(axisVec[i]) > Math.abs(axisVec[axis])) axis = i;
+    const dir = Math.sign(axisVec[axis]) || 1;
+    const layer = Math.round(cu.pos[axis]);
+    applyTurn(axis, layer, dir, false);
+  }
+
+  cv.addEventListener('pointerdown', e => {
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 合成事件可能无活动指针 */ }
+    const p = canvasPos(e);
+    // idle/finished：只能旋转视角，不能转层（题目锁定）
+    const hit = (session === 'active' && e.button !== 2 && !e.shiftKey) ? pickAt(p) : null;
+    drag = { x: p[0], y: p[1], hit, turned: false, button: e.button };
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const p = canvasPos(e);
+    const dx = p[0] - drag.x, dy = p[1] - drag.y;
+    if (drag.hit && !drag.turned && Math.hypot(dx, dy) > 14) {
+      doTurnFromDrag(drag.hit, dx, dy);
+      drag.turned = true;
+    } else if (!drag.hit) {
+      viewY += dx * .009;
+      viewX = Math.max(-1.35, Math.min(1.35, viewX + dy * .009));
+      drag.x = p[0]; drag.y = p[1];
+    }
+  });
+  const endDrag = () => { drag = null; };
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    zoom = Math.max(.65, Math.min(1.7, zoom * (e.deltaY > 0 ? .92 : 1.08)));
+  }, { passive: false });
+
+  function resetView() { viewX = .48; viewY = -.68; zoom = 1; }
+  cv.addEventListener('dblclick', resetView);
+
+  // ---------- 控件 ----------
+  function setOrder(v) {
+    v = Math.max(2, Math.min(8, Math.round(v) || 3));
+    buildCube(v);
+  }
+  document.getElementById('minus').onclick = () => setOrder(n - 1);
+  document.getElementById('plus').onclick = () => setOrder(n + 1);
+  document.getElementById('apply').onclick = () => setOrder(parseInt(orderInput.value, 10));
+  orderInput.addEventListener('keydown', e => { if (e.key === 'Enter') setOrder(parseInt(orderInput.value, 10)); });
+  function updatePresets() {
+    document.querySelectorAll('.preset').forEach(b => b.classList.toggle('active', +b.dataset.n === n));
+  }
+  document.querySelectorAll('.preset').forEach(b => b.onclick = () => setOrder(+b.dataset.n));
+  document.getElementById('scramble').onclick = scramble;
+  document.getElementById('reset').onclick = () => buildCube(n);
+  document.getElementById('view').onclick = resetView;
+  document.getElementById('undo').onclick = undo;
+  window.addEventListener('keydown', e => {
+    if (e.target === orderInput) return;
+    if (e.target && e.target.closest && e.target.closest('input, textarea, button, select, [contenteditable]')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+    if (k === ' ') { e.preventDefault(); scramble(); }
+  });
+
+  // ---------- 主循环 ----------
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(.05, (now - last)/1000); last = now;
+    if (anim) {
+      const t = Math.min(1, (now - anim.t0) / anim.dur);
+      const e = 1 - Math.pow(1 - t, 3);
+      const R = rotMat(anim.axis, anim.dir * Math.PI/2 * e);
+      anim.items.forEach(it => {
+        it.cu.pos = transformPos(R, it.pos);
+        it.cu.orient = matMul(R, it.orient);
+      });
+      if (t >= 1) {
+        anim.items.forEach(it => {
+          it.cu.pos = it.cu.pos.map(v => Math.round(v));
+          it.cu.orient = roundM(it.cu.orient);
+        });
+        const { axis, layer, dir } = anim;
+        anim = null;
+        finishTurn(axis, layer, dir, true);
+      }
+    }
+    if (running) elapsed = now - startTime;
+    const s = Math.floor(elapsed / 100) % 10;
+    const total = Math.floor(elapsed / 1000);
+    timeEl.textContent = String(Math.floor(total/60)).padStart(2,'0') + ':' +
+                         String(total%60).padStart(2,'0') + '.' + s;
+    draw();
+    requestAnimationFrame(loop);
+  }
+  // ================= 综合评分 =================
+  // 基准步数/时间按阶数设定（3 阶基准参考 Kociemba 约 20 步）；
+  // 得分 = (60% 步数效率 + 40% 时间效率) × 难度系数 × 1000，单项效率上限 2 倍。
+  const PAR = {
+    2: { moves: 11, seconds: 25 },
+    3: { moves: 20, seconds: 60 },
+    4: { moves: 32, seconds: 120 },
+    5: { moves: 46, seconds: 200 },
+    6: { moves: 62, seconds: 300 },
+    7: { moves: 80, seconds: 420 },
+    8: { moves: 100, seconds: 560 },
+  };
+  const GRADE_COLORS = { 'S+':'#FFD666', 'S':'#52C41A', 'A':'#1677FF', 'B':'#F5F5F5', 'C':'#FFA940', 'D':'#FF4D4F', 'DNF':'#6A788A' };
+  const STORE_KEY = 'cube-lab-scores';
+  let scoreHistory = (() => { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return []; } })();
+
+  function gradeOf(score) {
+    if (score >= 1200) return 'S+';
+    if (score >= 1000) return 'S';
+    if (score >= 800) return 'A';
+    if (score >= 600) return 'B';
+    if (score >= 400) return 'C';
+    return 'D';
+  }
+  function computeScore() {
+    if (!challenge || !solvedNow) return null;
+    const par = PAR[n] || PAR[3];
+    const strength = Math.sqrt(challenge.scrambleMoves / Math.max(1, n*8 + 12));
+    const parMoves = par.moves * strength;
+    const parSeconds = par.seconds * strength;
+    // 计时从「打乱」开始到「复原」结束，包含模型思考时间（对大模型评测很关键）
+    const totalMs = Math.max(1, performance.now() - challenge.startedAt);
+    const seconds = Math.max(0.1, totalMs / 1000);
+    const moveRatio = parMoves / Math.max(1, moveCount);
+    const timeRatio = parSeconds / seconds;
+    const efficiency = 0.6 * Math.min(2, moveRatio) + 0.4 * Math.min(2, timeRatio);
+    const difficulty = 1 + (n - 3) * 0.25;
+    const score = Math.round(efficiency * difficulty * 1000);
+    return {
+      score, grade: gradeOf(score), order: n,
+      moves: moveCount, seconds: Math.round(seconds * 10) / 10,
+      activeSeconds: Math.round(Math.max(0, elapsed) / 100) / 10,
+      parMoves: Math.round(parMoves * 10) / 10,
+      parSeconds: Math.round(parSeconds * 10) / 10,
+      moveRatio: Math.round(moveRatio * 100) / 100,
+      timeRatio: Math.round(timeRatio * 100) / 100,
+      difficulty: Math.round(difficulty * 100) / 100,
+      seed: challenge.seed, scrambleMoves: challenge.scrambleMoves,
+      totalMs: Math.round(totalMs),
+      at: Date.now(),
+    };
+  }
+  function recordScore() {
+    const s = computeScore();
+    if (!s) return;
+    lastScore = s;
+    scoreHistory.unshift(s);
+    scoreHistory = scoreHistory.slice(0, 20);
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(scoreHistory)); } catch (e) {}
+    scoreEl.textContent = s.score + ' · ' + s.grade;
+    scoreEl.style.color = GRADE_COLORS[s.grade] || '#52C41A';
+  }
+  function newChallenge(seed, scrambleMoves) {
+    challenge = { seed: seed === undefined ? null : seed, scrambleMoves, startedAt: performance.now() };
+    lastScore = null;
+    scoreEl.textContent = '—';
+    scoreEl.style.color = '';
+  }
+
+  // ---------- 测试会话 ----------
+  function startSession(options) {
+    const opts = typeof options === 'number' ? { moves: options } : (options || {});
+    buildCube(Math.max(2, Math.min(8, Math.round(Number(opts.order) || n))));
+    scrambleInternal(opts);         // 出题：此时题目才可见，计时起点
+    session = 'active';
+    emitChange('start');
+    return getSession();
+  }
+  // 兼容旧调用：scramble() 现在必须先开始测试
+  function scramble(options) { return startSession(options); }
+  function settleSession(outcome) {
+    if (session !== 'active') return getSession();
+    if (challenge) challenge.endedAt = performance.now();
+    running = false;
+    if (outcome === 'solved') recordScore();
+    else recordDNF();
+    session = 'finished';
+    emitChange('finish');
+    return getSession();
+  }
+  function finishSession() {
+    if (session !== 'active') throw new Error('当前没有进行中的测试：先调用 start()');
+    settleSession(isSolved() ? 'solved' : 'dnf');
+    return getSession();
+  }
+  function getSession() {
+    return {
+      state: session,                       // idle / active / finished
+      live: session === 'active',
+      seed: challenge ? challenge.seed : null,
+      scrambleMoves: challenge ? challenge.scrambleMoves : null,
+      elapsed: Math.round(sessionSeconds() * 10) / 10,
+      moves: moveCount,
+      solved: isSolved(),
+      result: lastScore,
+    };
+  }
+  function recordDNF() {
+    if (!challenge) return;
+    const s = {
+      score: 0, grade: 'DNF', order: n, dnf: true,
+      moves: moveCount, seconds: Math.round(sessionSeconds() * 10) / 10,
+      parMoves: null, parSeconds: null, moveRatio: null, timeRatio: null,
+      difficulty: null, seed: challenge.seed, scrambleMoves: challenge.scrambleMoves,
+      totalMs: Math.round(sessionSeconds() * 1000), at: Date.now(),
+    };
+    lastScore = s;
+    scoreHistory.unshift(s);
+    scoreHistory = scoreHistory.slice(0, 20);
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(scoreHistory)); } catch (e) {}
+    scoreEl.textContent = 'DNF';
+    scoreEl.style.color = GRADE_COLORS['DNF'] || '#6A788A';
+  }
+
+  // ================= 外部接口 CubeAPI =================
+  // 供程序读取魔方状态、执行转动。所有操作都是瞬时完成，方便自动化测试。
+  const FACE_LETTER = { px:'R', nx:'L', py:'U', ny:'D', pz:'F', nz:'B' };
+  const API_FACE_ORDER = [
+    { id:'py', name:'U' }, { id:'px', name:'R' }, { id:'pz', name:'F' },
+    { id:'ny', name:'D' }, { id:'nx', name:'L' }, { id:'nz', name:'B' },
+  ];
+  const FACE_TO_AXIS = { R:0, L:0, U:1, D:1, F:2, B:2 };
+  const FACE_DIR = { R:-1, L:1, U:-1, D:1, F:-1, B:1 };
+
+  // 面块串顺序：U R F D L B，每面 n*n 个，从该面外侧看，行优先
+  function faceGridPos(f, pos) {
+    const a = f.axis, b = (a+1)%3, c = (a+2)%3, last = n - 1;
+    switch (f.id) {
+      case 'px': return [last - pos[b], last - pos[c]]; // R
+      case 'nx': return [last - pos[b], pos[c]];        // L
+      case 'py': return [pos[b], pos[c]];               // U
+      case 'ny': return [last - pos[b], pos[c]];        // D
+      case 'pz': return [last - pos[c], pos[b]];        // F
+      case 'nz': return [last - pos[c], last - pos[b]]; // B
+    }
+  }
+
+  function readFacelets() {
+    const grid = {};
+    for (const item of API_FACE_ORDER) grid[item.name] = new Array(n*n).fill('?');
+    for (const cu of cubies) {
+      const pos = cu.pos.map(Math.round);
+      for (const sid of cu.stickers) {
+        const sf = FACE_BY_ID[sid];
+        const nl = [0,0,0]; nl[sf.axis] = sf.sign;
+        const nw = matVec(cu.orient, nl);
+        let target = null;
+        for (const f of FACES) {
+          const w = [0,0,0]; w[f.axis] = f.sign;
+          if (Math.abs(nw[0]-w[0]) + Math.abs(nw[1]-w[1]) + Math.abs(nw[2]-w[2]) < .1) { target = f; break; }
+        }
+        if (!target) continue;
+        const [row, col] = faceGridPos(target, pos);
+        if (row >= 0 && row < n && col >= 0 && col < n)
+          grid[FACE_LETTER[target.id]][row*n + col] = FACE_LETTER[sid];
+      }
+    }
+    const faces = {};
+    let facelets = '';
+    for (const item of API_FACE_ORDER) {
+      faces[item.name] = grid[item.name].join('');
+      facelets += faces[item.name];
+    }
+    return { faces, facelets };
+  }
+
+  function getState() {
+    const { faces, facelets } = readFacelets();
+    const centers = {};
+    for (const k of ['U','R','F','D','L','B'])
+      centers[k] = faces[k][Math.floor(n/2)*n + Math.floor(n/2)];
+    return {
+      order: n, facelets, faces, centers,
+      solved: isSolved(), status: statusEl.textContent,
+      moves: moveCount, time: timeEl.textContent, scrambled,
+      session, live: session === 'active',
+      score: lastScore,
+      challenge: challenge ? { seed: challenge.seed, scrambleMoves: challenge.scrambleMoves } : null,
+      history: history.map(m => ({ axis:m.axis, layer:m.layer, dir:m.dir })),
+    };
+  }
+  // 对外读取：idle 阶段锁定题目，避免开局前预计算
+  function publicState() {
+    const s = getState();
+    if (session === 'idle') {
+      return { ...s, facelets: null, faces: null, centers: null,
+        history: [], challenge: null, locked: true };
+    }
+    return { ...s, locked: false };
+  }
+
+  function emitChange(kind) {
+    window.dispatchEvent(new CustomEvent('cube:change', { detail: { kind, state: getState() } }));
+  }
+
+  // 取消可能正在进行的动画，并吸附到整数格
+  function settle() {
+    if (!anim) return;
+    anim = null;
+    cubies.forEach(cu => { cu.pos = cu.pos.map(Math.round); cu.orient = roundM(cu.orient); });
+  }
+  function doTurn(axis, layer, dir) {
+    assertActive();
+    settle();
+    applyTurn(axis, layer, dir, true);
+    finishTurn(axis, layer, dir, true);
+  }
+
+  // 动画转动：一次只走一个 90°，视觉上看得见转动过程（演示 / 手动用）。
+  // 计步、胜负判定、结算由主循环在动画结束时调用 finishTurn 完成，所以这里不能重复调。
+  function turnAnimated(tok, durMs) {
+    assertActive();
+    const t = parseToken(tok);
+    if (t.times !== 1) throw new Error('animate 一次只转一个 90°，"2" 请拆成两步调用');
+    settle();
+    applyTurn(t.axis, t.layer, t.dir, false, durMs);
+    return getState();
+  }
+
+  function parseToken(tok) {
+    const m = /^([URFDLB])(2|')?$/.exec(String(tok).trim().toUpperCase());
+    if (!m) throw new Error('无效的转动记号: ' + tok);
+    const face = m[1], suffix = m[2] || '';
+    const layer = (face === 'R' || face === 'U' || face === 'F') ? n - 1 : 0;
+    let dir = FACE_DIR[face];
+    if (suffix === "'") dir = -dir;
+    return { axis: FACE_TO_AXIS[face], layer, dir, times: suffix === '2' ? 2 : 1 };
+  }
+
+  function move(tokens) {
+    const list = Array.isArray(tokens)
+      ? tokens
+      : String(tokens || '').split(/[\s,]+/).filter(Boolean);
+    for (const tok of list) {
+      const t = parseToken(tok);
+      for (let i=0; i<t.times; i++) doTurn(t.axis, t.layer, t.dir);
+    }
+    emitChange('move');
+    return getState();
+  }
+
+  function moveAxis(axis, layer, dir) {
+    axis = Number(axis); layer = Number(layer); dir = Number(dir);
+    if (![0,1,2].includes(axis)) throw new Error('axis 必须是 0(x) / 1(y) / 2(z)');
+    if (!Number.isInteger(layer) || layer < 0 || layer >= n)
+      throw new Error('layer 必须在 0 ～ ' + (n-1) + ' 之间');
+    if (![-1,1].includes(dir)) throw new Error('dir 必须是 1 或 -1');
+    doTurn(axis, layer, dir);
+    emitChange('moveAxis');
+    return getState();
+  }
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function scrambleInternal(options) {
+    const opts = typeof options === 'number' ? { moves: options } : (options || {});
+    const seed = opts.seed === undefined ? Math.floor(Math.random()*1e9) : (Number(opts.seed) >>> 0);
+    const count = Math.max(1, Math.min(500, Number(opts.moves) || (n*8 + 12)));
+    // 4 阶及以上必须一起转内层：只转最外两层时，每个面中间的块永远不会离开原位，
+    // 打乱后中间区域仍是完整的一块，看起来几乎没动
+    const includeInner = opts.includeInner === undefined ? n > 3 : !!opts.includeInner;
+    const rand = mulberry32(seed);
+    const layers = [];
+    for (let l=0; l<n; l++) if (includeInner || l === 0 || l === n-1) layers.push(l);
+    buildCube(n);
+    for (let i=0; i<count; i++) {
+      applyTurn(
+        Math.floor(rand()*3),
+        layers[Math.floor(rand()*layers.length)],
+        rand() < .5 ? 1 : -1,
+        true
+      );
+    }
+    scrambled = true; solvedNow = isSolved();
+    setStatus(solvedNow ? '已复原' : '挑战中');
+    history = []; moveCount = 0; movesEl.textContent = '0';
+    startTime = 0; elapsed = 0; running = false;
+    timeEl.textContent = '00:00.0';
+    newChallenge(seed, count);
+    emitChange('scramble');
+    const state = getState();
+    state.seed = seed;
+    return state;
+  }
+
+  function reset() { buildCube(n); emitChange('reset'); return getState(); }
+  function setOrder(v) {
+    buildCube(Math.max(2, Math.min(8, Math.round(Number(v)) || 3)));
+    emitChange('order'); return getState();
+  }
+  function undoMove() { undo(); emitChange('undo'); return getState(); }
+  function resetViewApi() { settle(); resetView(); return getState(); }
+
+  // 24 个合法旋转矩阵（用于从面块串还原每块的位置与朝向）
+  const ROTATIONS = (() => {
+    const out = [];
+    const perms = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+    for (const p of perms) for (const a of [1,-1]) for (const b of [1,-1]) for (const c of [1,-1]) {
+      const R = new Array(9).fill(0);
+      const s = [a,b,c];
+      for (let i=0;i<3;i++) R[p[i]*3 + i] = s[i];
+      const det = R[0]*(R[4]*R[8]-R[5]*R[7]) - R[1]*(R[3]*R[8]-R[5]*R[6]) + R[2]*(R[3]*R[7]-R[4]*R[6]);
+      if (det === 1) out.push(R);
+    }
+    return out;
+  })();
+
+  function setState(facelets) {
+    if (n !== 2 && n !== 3) throw new Error('setState 目前仅支持 2 阶和 3 阶');
+    const s = String(facelets || '').replace(/[\s,]+/g, '').toUpperCase();
+    const expect = 6 * n * n;
+    if (s.length !== expect) throw new Error('面块串长度应为 ' + expect + '，实际 ' + s.length);
+    if (/[^URFDLB]/.test(s)) throw new Error('面块串只能包含 U R F D L B');
+    const counts = {};
+    for (const ch of s) counts[ch] = (counts[ch] || 0) + 1;
+    for (const k of ['U','R','F','D','L','B'])
+      if (counts[k] !== n*n) throw new Error('每种颜色应恰好出现 ' + (n*n) + ' 次');
+
+    const target = {};
+    let off = 0;
+    for (const item of API_FACE_ORDER) { target[item.name] = s.slice(off, off + n*n); off += n*n; }
+    const used = new Set();
+    const next = [];
+    for (let x=0; x<n; x++) for (let y=0; y<n; y++) for (let z=0; z<n; z++) {
+      const pos = [x,y,z];
+      const want = {};
+      for (const f of FACES) {
+        const boundary = f.sign > 0 ? pos[f.axis] === n-1 : pos[f.axis] === 0;
+        if (!boundary) continue;
+        const [row, col] = faceGridPos(f, pos);
+        want[f.id] = target[FACE_LETTER[f.id]][row*n + col];
+      }
+      const sig = Object.values(want).sort().join('');
+      let placed = null;
+      for (const cand of cubies) {
+        if (used.has(cand.basePos.join(','))) continue;
+        if (cand.stickers.map(id => FACE_LETTER[id]).sort().join('') !== sig) continue;
+        for (const R of ROTATIONS) {
+          let ok = true;
+          for (const sid of cand.stickers) {
+            const sf = FACE_BY_ID[sid];
+            const nl = [0,0,0]; nl[sf.axis] = sf.sign;
+            const nw = matVec(R, nl);
+            const f = FACES.find(ff => {
+              const w = [0,0,0]; w[ff.axis] = ff.sign;
+              return Math.abs(nw[0]-w[0]) + Math.abs(nw[1]-w[1]) + Math.abs(nw[2]-w[2]) < .1;
+            });
+            if (!f || want[f.id] !== FACE_LETTER[sid]) { ok = false; break; }
+          }
+          if (ok) {
+            placed = { pos: pos.slice(), basePos: cand.basePos.slice(), orient: R.slice(), stickers: cand.stickers.slice() };
+            break;
+          }
+        }
+        if (placed) break;
+      }
+      if (!placed) throw new Error('无法根据颜色还原状态，面块串可能不是合法的魔方状态');
+      used.add(placed.basePos.join(','));
+      next.push(placed);
+    }
+    settle();
+    cubies = next;
+    history = []; moveCount = 0; movesEl.textContent = '0';
+    startTime = 0; elapsed = 0; running = false; scrambled = true;
+    timeEl.textContent = '00:00.0';
+    solvedNow = isSolved();
+    setStatus(solvedNow ? '已复原' : '挑战中');
+    winEl.classList.remove('show');
+    newChallenge(null, n * 8 + 12);
+    emitChange('setState');
+    return getState();
+  }
+
+  const API = {
+    version: '2.0',
+    getState: publicState,
+    getFacelets: () => {
+      const s = publicState();
+      if (s.locked) throw new Error('题目尚未开始，不能读取面块串：先调用 start()');
+      return s.facelets;
+    },
+    isSolved: () => isSolved(),
+    getOrder: () => n,
+    getHistory: () => {
+      if (session === 'idle') throw new Error('题目尚未开始：先调用 start()');
+      return history.map(m => ({ axis:m.axis, layer:m.layer, dir:m.dir }));
+    },
+    getCubies: () => {
+      if (session === 'idle') throw new Error('题目尚未开始：先调用 start()');
+      return cubies.map(cu => ({
+        pos: cu.pos.map(Math.round), basePos: cu.basePos.slice(),
+        orient: cu.orient.slice(), stickers: cu.stickers.slice(),
+      }));
+    },
+    // 会话控制：start 出题并计时，finish 手动交卷（未复原记 DNF）
+    start: startSession, finish: finishSession, getSession,
+
+    // ---------- AI 评测协议：访问即可用，结果与是否读代码无关 ----------
+    // evaluate(): 自描述入口，一次调用返回"现在该做什么 + 题目 + 格式 + 提交方法"
+    evaluate: () => {
+      const s = getSession();
+      const base = {
+        version: '2.0',
+        protocol: '1. 调 evaluate() 读题目 → 2. 自己求解 facelets → 3. 调 submit("R U R\' ...") 交解法',
+        faceletFormat: '54 字符，面序 U R F D L B，每面从外侧看、行优先；中心色即该面字母',
+        moves: '标准记号 U D L R F B，可加 \' 逆转或 2 转两次，空格分隔，如 "R U R\' F2"',
+        scoring: '复原自动计分：步数效率 60% + 时间效率 40%，乘难度系数；交卷未复原记 DNF(0)',
+        note: '无需读取页面代码或文档，evaluate() 与 submit() 已包含评测所需的全部信息',
+      };
+      if (s.state === 'idle') {
+        return { ...base, action: 'CALL_START', message: '尚未出题，先调用 start({seed?,moves?,order?}) 领取题目', task: null, session: s };
+      }
+      if (s.state === 'finished') {
+        return { ...base, action: 'FINISHED', message: '本轮已结束', task: null, session: s, result: s.result };
+      }
+      return {
+        ...base,
+        action: 'SOLVE_NOW',
+        message: '解出下面的 facelets，把解法传给 submit(solution)',
+        task: { order: n, facelets: getState().facelets, seed: s.seed, scrambleMoves: s.scrambleMoves, elapsed: s.elapsed },
+        submit: 'submit("R U R\' F2 ...")',
+        session: s,
+      };
+    },
+    // submit(): 一站式提交解法，自动执行并结算；结果只取决于解法本身
+    submit: (solution) => {
+      if (session !== 'active') throw new Error('没有进行中的测试：先调用 start()，或用 evaluate() 查看当前状态');
+      move(solution);                       // 复原时 finishTurn 内会自动 settleSession('solved')
+      return {
+        solved: isSolved(),
+        session: getSession(),
+        score: lastScore,
+        message: isSolved() ? '复原成功，已自动计分' : '尚未复原：可继续 submit() 追加转动，或 finish() 交卷记 DNF',
+      };
+    },
+
+    move, moveAxis, animate: turnAnimated, scramble, reset, setOrder, setState,
+    undo: undoMove, resetView: resetViewApi,
+    getScore: () => lastScore,
+    getScores: () => scoreHistory.map(s => ({ ...s })),
+    clearScores: () => {
+      scoreHistory = []; lastScore = null;
+      try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+      scoreEl.textContent = '—'; scoreEl.style.color = '';
+      return true;
+    },
+    getScoreConfig: () => ({
+      par: JSON.parse(JSON.stringify(PAR)),
+      weights: { moves: 0.6, time: 0.4 },
+      maxRatio: 2,
+      timeBasis: '从 start() 出题到复原/交卷的时间（含模型思考时间）',
+      difficulty: '1 + (order - 3) * 0.25',
+      factor: 1000,
+      grades: { 'S+':1200, S:1000, A:800, B:600, C:400, D:0, DNF:0 },
+      session: 'start() 领取题目并开始计时；复原自动结算；finish() 可提前交卷，未复原记 DNF',
+    }),
+    help: () => ({
+      quickstart: {
+        'evaluate()': '【入口】一次调用返回：当前该做什么 + 完整协议 + facelets 题目 + 提交方法。无需读代码或文档',
+        'start({seed,moves,order})': '领取题目并开始计时（evaluate 提示 CALL_START 时调用）',
+        'submit("R U R\' F2 ...")': '一站式提交解法：自动执行 + 复原自动结算，返回成绩',
+      },
+      session: {
+        'start({seed,moves,order})': '领取题目：出题并揭示状态，开始计时（必做第一步）',
+        'finish()': '手动交卷并结算；未复原记为 DNF（0 分）',
+        'getSession()': '会话状态：state(idle/active/finished) / live / seed / elapsed / moves / solved / result',
+      },
+      read: {
+        'getState()': '完整状态：order / facelets(URFDLB 54串) / faces / centers / solved / moves / time / history / session',
+        'getFacelets()': '只返回 54 字符面块串（U R F D L B 顺序）',
+        'isSolved()': '是否已复原', 'getOrder()': '当前阶数',
+        'getHistory()': '已执行的底层转动列表', 'getCubies()': '每个小块的 pos / orient / stickers',
+      },
+      operate: {
+        'move("R U R\' F2")': '按标准转动记号执行，可传字符串或数组，支持 U U\' U2',
+        'animate("R", 毫秒)': '带动画转一个 90°（一次一个记号），用于演示；计步与结算在动画结束时完成',
+        'moveAxis(axis, layer, dir)': '底层转动：axis 0=x 1=y 2=z，layer 0..n-1，dir 1/-1',
+        'scramble({seed, moves, includeInner})': '带种子打乱；4 阶及以上默认连内层一起转（否则中间块不动），也可显式指定 includeInner',
+        'setState(facelets)': '用 54 位面块串设置任意状态（仅 2/3 阶）',
+        'reset()': '复原到初始状态', 'setOrder(n)': '切换 2~8 阶', 'undo()': '撤销上一步',
+      },
+      score: {
+        'getScore()': '本次成绩：score / grade / moves / seconds / parMoves / parSeconds / moveRatio / timeRatio / difficulty / seed',
+        'getScores()': '最近 20 条成绩（存 localStorage）', 'clearScores()': '清空成绩',
+        'getScoreConfig()': '评分基准与权重',
+      },
+      events: {
+        'cube:ready': '接口就绪', 'cube:change': '状态变化，detail.kind / detail.state',
+        'window.postMessage({type:"cube-api",id,method,args})': '跨 iframe 调用，回包 type=cube-api-result',
+      },
+      notation: 'R: x轴最右层逆时针(dir=-1)；L/U/D/F/B 同理，\' 反转，2 转两次',
+      note: '面块串为 URFDLB 顺序，每面从外侧看、行优先，可直接喂给 Kociemba 等求解器（需先 setState(已中心归位的状态) 或 scramble 默认只转外层）',
+    }),
+  };
+  window.CubeAPI = API;
+
+  // postMessage 桥：父页面或外部程序可跨 iframe 调用
+  window.addEventListener('message', e => {
+    const d = e.data;
+    if (!d || d.type !== 'cube-api' || typeof d.method !== 'string') {
+      if (d && d.type === 'cube-api-ping' && e.source)
+        e.source.postMessage({ type:'cube-api-pong', version: API.version }, e.origin);
+      return;
+    }
+    try {
+      const fn = API[d.method];
+      if (typeof fn !== 'function') throw new Error('未知方法: ' + d.method);
+      const result = fn(...(Array.isArray(d.args) ? d.args : []));
+      if (e.source) e.source.postMessage({ type:'cube-api-result', id:d.id, ok:true, result }, e.origin);
+    } catch (err) {
+      if (e.source) e.source.postMessage({ type:'cube-api-result', id:d.id, ok:false, error:String(err && err.message || err) }, e.origin);
+    }
+  });
+
+  buildCube(3);
+  requestAnimationFrame(loop);
+  window.dispatchEvent(new CustomEvent('cube:ready', { detail: { version: API.version } }));
+})();
+</script>
+
+<script>
+
+(() => {
+  const dot = document.getElementById('dot');
+  // 演示模式：种子 42 / 36 步打乱的确定性解法，用于逐步展示求解过程
+  const DEMO_SOLUTION = "U2 L2 U2 F' U F R F R2 U' F2 U2 R2 D' F2 L2 B2 U2 R2 D' R2 U2";
+  let demoRunning = false, demoStep = 0, demoTotal = 0, demoStarted = false;
+
+  function api() {
+    if (!window.CubeAPI) throw new Error('CubeAPI 尚未就绪');
+    return window.CubeAPI;
+  }
+  function setReady(ok) { if (dot) dot.classList.toggle('ok', !!ok); }
+
+  const GRADE_COLORS = { 'S+':'#FFD666', 'S':'#52C41A', 'A':'#1677FF', 'B':'#F5F5F5', 'C':'#FFA940', 'D':'#FF4D4F', 'DNF':'#6A788A' };
+  function fmtClock(sec) {
+    const t = Math.max(0, sec || 0);
+    const m = Math.floor(t / 60), s = Math.floor(t % 60), d = Math.floor((t * 10) % 10);
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + '.' + d;
+  }
+  function renderSession() {
+    const bar = document.getElementById('sessionBar');
+    if (!bar) return;
+    const phase = document.getElementById('sessPhase');
+    const detail = document.getElementById('sessDetail');
+    const clock = document.getElementById('sessClock');
+    const moves = document.getElementById('sessMoves');
+    const startBtn = document.getElementById('startBtn');
+    const finishBtn = document.getElementById('finishBtn');
+    const stage = document.querySelector('.stage');
+    let s;
+    try { s = api().getSession(); } catch (e) { return; }
+    // 结算瞬间就退出演示态，别让状态条一直写着"正在执行"
+    if (demoRunning && s.state !== 'active') demoRunning = false;
+    bar.dataset.state = s.state;
+    if (stage) stage.classList.toggle('is-locked', s.state === 'idle' && !demoRunning);
+    startBtn.textContent = s.state === 'finished' ? '再来一局' : (s.state === 'active' ? '重新出题' : '开始测试');
+    startBtn.disabled = demoRunning;
+    finishBtn.disabled = demoRunning || s.state !== 'active';
+    clock.textContent = fmtClock(s.elapsed);
+    moves.textContent = s.moves + ' 步';
+    const seedTxt = s.seed === null ? '随机种子' : '种子 ' + s.seed;
+    if (demoRunning && s.state === 'active') {
+      phase.textContent = '自动演示中 · 逐步复原';
+      detail.textContent = seedTxt + ' · 第 ' + demoStep + '/' + demoTotal + ' 步 · AI 正在执行解法';
+    } else if (s.state === 'idle') {
+      phase.textContent = '待开始 · 题目已锁定';
+      detail.textContent = '领取题目后才揭示魔方状态并开始计时，避免提前预计算解法';
+    } else if (s.state === 'active') {
+      phase.textContent = '测试进行中';
+      detail.textContent = seedTxt + ' · ' + s.scrambleMoves + ' 步打乱 · 复原自动结算，或点交卷记 DNF';
+    } else {
+      phase.textContent = s.solved ? '已结算 · ' + (s.result ? s.result.grade : '') : '已交卷 · DNF';
+      detail.textContent = seedTxt + (s.result ? ' · ' + s.result.score + ' 分 · ' + s.moves + ' 步 · ' + s.elapsed.toFixed(1) + ' 秒' : '');
+    }
+  }
+  function renderScore() {
+    let s, list;
+    try { s = api().getScore(); list = api().getScores(); }
+    catch (e) { return; }
+    const num = document.getElementById('scoreNum');
+    const grade = document.getElementById('scoreGrade');
+    const meta = document.getElementById('scoreMeta');
+    if (s) {
+      num.textContent = s.score;
+      num.style.color = GRADE_COLORS[s.grade] || '#52C41A';
+      grade.textContent = s.grade;
+      grade.style.color = GRADE_COLORS[s.grade] || '#52C41A';
+      grade.style.borderColor = GRADE_COLORS[s.grade] || '#52C41A';
+      const par = (s.parMoves === null || s.parMoves === undefined) ? '—' : s.parMoves;
+      const parS = (s.parSeconds === null || s.parSeconds === undefined) ? '—' : s.parSeconds;
+      const diff = (s.difficulty === null || s.difficulty === undefined) ? '—' : '×' + s.difficulty;
+      meta.innerHTML = '步 <b>' + s.moves + '</b> / 基准 ' + par +
+        '　秒 <b>' + s.seconds + '</b> / 基准 ' + parS +
+        '<br>难度 ' + diff + '　种子 ' + (s.seed === null ? '随机' : s.seed);
+    } else {
+      num.textContent = '—'; num.style.color = '';
+      grade.textContent = '—'; grade.style.color = ''; grade.style.borderColor = '';
+      meta.textContent = '复原后自动计分';
+    }
+    const body = document.getElementById('scoreBody');
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="7" class="empty">暂无成绩</td></tr>';
+      return;
+    }
+    body.innerHTML = list.map(x => {
+      const d = new Date(x.at);
+      const t = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      return '<tr><td>' + t + '</td><td>' + x.order + '</td><td>' + x.score +
+        '</td><td class="g" style="color:' + (GRADE_COLORS[x.grade]||'#52C41A') + '">' + x.grade +
+        '</td><td>' + x.moves + '</td><td>' + x.seconds + '</td><td>' +
+        (x.seed === null ? '随机' : x.seed) + '</td></tr>';
+    }).join('');
+  }
+
+  function runDemo() {
+    if (demoStarted) return;
+    const params = new URLSearchParams(location.search);
+    let arg = params.get('demo');
+    if (arg === null) return;
+    demoStarted = true;
+    const seed = Number(params.get('seed') || 42) >>> 0;
+    const moves = Number(params.get('moves') || 36);
+    let solution = (arg === '1' || arg === '') ? DEMO_SOLUTION : decodeURIComponent(arg);
+    const tokens = solution.trim().split(/[\s,]+/).filter(Boolean);
+    // 把 "2" 拆成两个 90°，每步单独动画，肉眼能看清每一层在转
+    const steps = [];
+    tokens.forEach(t => {
+      if (/2$/i.test(t)) { const b = t.slice(0, -1); steps.push(b, b); }
+      else steps.push(t);
+    });
+
+    try {
+      api().start({ seed, moves });
+    } catch (e) { demoStarted = false; return; }
+    demoRunning = true;
+    demoStep = 0;
+    demoTotal = steps.length;
+    renderSession();
+
+    // 演示时把舞台滚到视口内，保证一打开就能看到转动过程
+    const stageEl = document.querySelector('.stage');
+    if (stageEl) {
+      try { stageEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      catch (e) { stageEl.scrollIntoView(); }
+    }
+
+    // 每步之间留间隔，动画时长必须短于间隔，否则下一步会打断上一步的动画
+    let i = 0;
+    const pace = Math.max(200, Math.min(1400, Number(params.get('pace')) || 480));
+    const dur = Math.max(90, Math.min(320, pace - 140));
+    const tick = () => {
+      if (i >= steps.length) {
+        // 等最后一步动画收尾（结算在动画结束时触发）
+        setTimeout(() => { demoRunning = false; renderSession(); renderScore(); }, dur + 80);
+        return;
+      }
+      try { api().animate(steps[i], dur); } catch (e) {}
+      i++;
+      demoStep = i;
+      renderSession();
+      renderScore();
+      setTimeout(tick, pace);
+    };
+    setTimeout(tick, 700); // 先让用户看清打乱后的初始状态
+  }
+
+  function renderWin() {
+    const win = document.getElementById('win');
+    if (!win) return;
+    let s;
+    try { s = api().getScore(); } catch (e) { return; }
+    const scoreEl = document.getElementById('winScore');
+    const gradeEl = document.getElementById('winGrade');
+    const metaEl = document.getElementById('winMeta');
+    if (!s) {
+      if (scoreEl) scoreEl.textContent = '—';
+      if (gradeEl) gradeEl.textContent = '—';
+      if (metaEl) metaEl.textContent = '';
+      return;
+    }
+    if (scoreEl) { scoreEl.textContent = s.score; scoreEl.style.color = GRADE_COLORS[s.grade] || '#E8EDF3'; }
+    if (gradeEl) {
+      gradeEl.textContent = s.grade;
+      gradeEl.style.color = GRADE_COLORS[s.grade] || '#52C41A';
+    }
+    if (metaEl) {
+      const par = (s.parMoves === null || s.parMoves === undefined) ? '—' : s.parMoves;
+      metaEl.textContent = s.moves + ' 步 / 基准 ' + par + ' · ' + s.seconds + ' 秒 · 种子 ' + (s.seed === null ? '随机' : s.seed);
+    }
+  }
+
+  function init() {
+    try {
+      setReady(!!api().version);
+      renderScore();
+      renderSession();
+      renderWin();
+      runDemo();
+    } catch (e) { setReady(false); }
+  }
+
+  function doStart() {
+    try {
+      const raw = (document.getElementById('seedInput').value || '').trim();
+      const opts = raw === '' ? {} : { seed: Number(raw) >>> 0 };
+      api().start(opts);
+      renderSession();
+    } catch (e) { /* 状态由 getSession 同步 */ }
+  }
+  function doFinish() {
+    try {
+      api().finish();
+      renderSession();
+      renderScore();
+    } catch (e) { /* 状态由 getSession 同步 */ }
+  }
+  document.getElementById('startBtn').onclick = doStart;
+  document.getElementById('finishBtn').onclick = doFinish;
+
+  window.addEventListener('cube:change', (e) => {
+    renderScore();
+    renderSession();
+    const kind = e.detail && e.detail.kind;
+    if (kind === 'solve' || kind === 'finish') {
+      renderWin();
+      const win = document.getElementById('win');
+      if (win) {
+        win.classList.add('show');
+        setTimeout(() => win.classList.remove('show'), 5200);
+      }
+    }
+  });
+  window.addEventListener('cube:ready', () => { init(); renderSession(); });
+  setInterval(() => { try { renderSession(); } catch (e) {} }, 100);
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+</script>
+
+
+</body></html>
