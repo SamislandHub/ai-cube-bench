@@ -105,6 +105,31 @@ R U R' U' F2 D'
 
 ---
 
+## 提示词（Prompt）
+
+评测要可复现，提示词就得统一。仓库里放了两份可直接复制使用的中英文提示词，把「只准通过 `CubeAPI` 交互」「不许读源码」「先备好求解器再 `start()`」这些约束都写死了：
+
+| 文件 | 内容 |
+| --- | --- |
+| [`prompts/benchmark-zh.md`](prompts/benchmark-zh.md) | 中文标准版，另含「固定题组」与「纯求解」两个变体 |
+| [`prompts/benchmark-en.md`](prompts/benchmark-en.md) | English version, same rules and variants |
+
+最短可用版本，直接粘给任何能执行 JS 的 Agent：
+
+```text
+打开 <页面地址>，用 window.CubeAPI 完成一次魔方评测：
+1) CubeAPI.evaluate() 看当前该做什么；
+2) 若提示 CALL_START，先 CubeAPI.start({order:3,seed:42,moves:36})，再 evaluate()；
+3) 自己求解返回的 task.facelets（54 字符，面序 U R F D L B）；
+4) CubeAPI.submit("你的解法") 交卷。
+只通过 CubeAPI 交互，不要读页面源码，不要用 reset/setState 改题；解不出就 finish() 记 DNF。
+最后用一行汇报：score / grade / moves / seconds / seed。
+```
+
+完整版还包含计时说明和汇报格式。关键一条：**先把求解器装好、自检通过，再调用 `start()`**——计时含思考时间，装依赖装到一半开始计时，时间效率基本就废了。
+
+固定题组（`{order:3, seed:42|7|2024, moves:36}`）适合横向比较不同模型的成绩，取平均分即可。
+
 ## CubeAPI 速查
 
 ### 会话
@@ -258,8 +283,11 @@ index.html?demo=1&seed=42&moves=36&pace=480
 
 ```
 ai-cube-bench/
-├── index.html        # 全部代码：CubeAPI 内核 + 渲染 + 评测计分 + 界面
-├── docs/preview.png  # 界面截图
+├── index.html                  # 全部代码：CubeAPI 内核 + 渲染 + 评测计分 + 界面
+├── prompts/
+│   ├── benchmark-zh.md         # 中文评测提示词（含固定题组 / 纯求解变体）
+│   └── benchmark-en.md         # English prompt
+├── docs/preview.png            # 界面截图
 ├── README.md
 └── LICENSE
 ```
@@ -287,6 +315,15 @@ ai-cube-bench/
 - 界面仅中文，未做 i18n
 - 触屏可用，但交互针对桌面鼠标/触控板优化
 - 单文件意味着所有样式与逻辑共处一室，二次开发时建议按注释分节阅读
+
+### 完整性说明
+
+评测协议靠被试者遵守，代码层面没有强制拦截。目前已知的绕过方式：
+
+- 会话进行中调用 `reset()` 会把魔方复原，紧接着 `finish()` 会以 **0 步**结算，步数效率直接触顶（`moveRatio` 上限 2 倍）
+- `setState()` / `setOrder()` 同样能在会话进行中换掉当前题目
+
+提示词里已明确禁止这几类调用。如果你要做严格的公开榜单，建议在 `start` / `reset` / `setState` / `setOrder` 里加一条会话状态检查（会话进行中直接抛错）。本项目默认不做强制，是因为「复原」按钮本身也是手动玩的正常操作，硬拦会误伤。
 
 ---
 
