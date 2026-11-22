@@ -8,6 +8,8 @@
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#)
 [![Single file](https://img.shields.io/badge/build-none-lightgrey.svg)](#)
 
+![界面预览](docs/preview.png)
+
 ---
 
 ## 这是什么
@@ -256,7 +258,8 @@ index.html?demo=1&seed=42&moves=36&pace=480
 
 ```
 ai-cube-bench/
-├── index.html   # 全部代码：CubeAPI 内核 + 渲染 + 评测计分 + 界面
+├── index.html        # 全部代码：CubeAPI 内核 + 渲染 + 评测计分 + 界面
+├── docs/preview.png  # 界面截图
 ├── README.md
 └── LICENSE
 ```
